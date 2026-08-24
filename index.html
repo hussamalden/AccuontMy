@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>دفتري — محاسبك الشخصي</title>
+<meta name="theme-color" content="#1C2431">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap');
+  :root{
+    --ink:#1C2431; --ink2:#2A3345; --paper:#F4EFE2; --card:#FBF8F2;
+    --line:#D9CFB8; --line2:#EDE6D3; --brass:#B08D57; --muted:#8A7E63;
+    --muted2:#8A93A6; --good:#2F6B4F; --bad:#A8432E;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Cairo',sans-serif;background:var(--paper);color:var(--ink);}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  header.app{background:var(--ink);color:var(--paper);padding:14px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:40;box-shadow:0 2px 8px rgba(0,0,0,.2);}
+  header.app .title{font-weight:800;font-size:15px;line-height:1.1;}
+  header.app .sub{font-size:10px;color:var(--brass);line-height:1.1;}
+  main{max-width:600px;margin:0 auto;padding:16px;padding-bottom:96px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:16px;}
+  .card .pad{padding:16px;}
+  .section-title{display:flex;align-items:center;gap:8px;padding:14px 16px 0;font-weight:700;font-size:15px;}
+  .section-title .dot{width:6px;height:6px;background:var(--brass);border-radius:50%;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .divider-row > div{border-top:1px solid var(--line);padding:12px 16px;}
+  .divider-row{border-top:1px solid var(--line);}
+  .divider-row > div:first-child{border-left:1px solid var(--line);}
+  .stat-label{font-size:11px;color:var(--muted);font-weight:500;display:block;margin-bottom:4px;}
+  .stat-value{font-size:17px;font-weight:700;}
+  .good{color:var(--good);} .bad{color:var(--bad);}
+  .mini{background:#F0EADA;border-radius:8px;padding:8px 4px;text-align:center;}
+  .mini .l{font-size:10px;color:var(--muted);}
+  .mini .v{font-size:12px;font-weight:600;}
+  label.field{display:flex;flex-direction:column;gap:4px;font-size:13px;margin-bottom:10px;}
+  label.field span{font-size:12px;color:#5B5340;font-weight:500;}
+  input,select,textarea{background:#fff;border:1px solid var(--line);border-radius:6px;padding:9px 10px;font-size:14px;font-family:inherit;width:100%;color:var(--ink);}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--brass);box-shadow:0 0 0 2px rgba(176,141,87,.3);}
+  textarea{min-height:90px;resize:vertical;}
+  .btn{border:none;border-radius:6px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;}
+  .btn-primary{background:var(--ink);color:var(--paper);}
+  .btn-primary:hover{background:var(--ink2);}
+  .btn-primary:disabled{opacity:.5;cursor:default;}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink);}
+  .btn-ghost:hover{background:#F0EADA;}
+  .btn-danger{background:var(--bad);color:#fff;}
+  .row{display:flex;gap:8px;}
+  .row.wrap{flex-wrap:wrap;}
+  .flex1{flex:1;}
+  .item-card{border:1px solid var(--line);border-radius:8px;padding:10px;background:rgba(255,255,255,.6);margin-bottom:10px;}
+  .item-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .muted{color:var(--muted);font-size:12px;}
+  .x-btn{color:var(--bad);background:none;border:none;cursor:pointer;font-size:16px;line-height:1;}
+  nav.tabs{position:fixed;bottom:0;left:0;right:0;background:var(--ink);border-top:1px solid #3A4356;z-index:40;display:flex;overflow-x:auto;}
+  nav.tabs .wrap{display:flex;min-width:max-content;margin:0 auto;max-width:600px;width:100%;}
+  nav.tabs button{flex:1;min-width:60px;background:none;border:none;color:var(--muted2);display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 6px;font-size:10px;font-family:inherit;cursor:pointer;}
+  nav.tabs button.active{color:var(--brass);}
+  nav.tabs button svg{width:18px;height:18px;}
+  .toast{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:var(--good);color:#fff;padding:9px 16px;border-radius:6px;font-size:13px;font-weight:600;z-index:60;box-shadow:0 4px 12px rgba(0,0,0,.2);}
+  .toast.bad{background:var(--bad);}
+  .ledger-row{padding:10px 16px;display:flex;justify-content:space-between;align-items:flex-start;border-top:1px solid var(--line2);}
+  .ledger-row:first-child{border-top:none;}
+  .empty{padding:28px 16px;text-align:center;color:var(--muted);font-size:14px;}
+  h2.step-title{font-size:18px;font-weight:800;margin:4px 0 16px;}
+  .step-label{font-size:12px;color:var(--muted);margin-bottom:4px;}
+  select.status-select{font-size:11px;background:#F0EADA;border:1px solid var(--line);border-radius:5px;padding:4px 6px;}
+  .warn{color:var(--bad);font-size:13px;display:flex;align-items:center;gap:5px;margin-top:8px;}
+</style>
+</head>
+<body>
+<header class="app">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B08D57" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+  <div><div class="title">دفتري</div><div class="sub">محاسبك الشخصي المستمر</div></div>
+</header>
+<main id="app"></main>
+<nav class="tabs" id="tabs"></nav>
+
+<script>
+/* ============================ DATA LAYER ============================ */
+const STORE_KEY = 'daftary-data';
+const uid = () => Math.random().toString(36).slice(2,10);
+const todayISO = () => new Date().toISOString().slice(0,10);
+const num = v => (v===''||v===null||v===undefined||isNaN(v)) ? 0 : Number(v);
+const fmt = (n,cur='USD') => (n===null||n===undefined||isNaN(n)) ? '—' : Number(n).toLocaleString('en-US',{maximumFractionDigits:2}) + ' ' + cur;
+const clone = o => JSON.parse(JSON.stringify(o));
+
+const EXPENSE_CATS = [
+  {key:'materials',label:'مواد'},{key:'labor',label:'أجور عمال'},{key:'technicians',label:'أجور فنيين'},
+  {key:'transport',label:'نقل'},{key:'fuel',label:'وقود'},{key:'tools',label:'أدوات ومعدات'},
+  {key:'maintenance',label:'صيانة'},{key:'rent',label:'إيجار'},{key:'utilities',label:'كهرباء واتصالات'},
+  {key:'marketing',label:'تسويق'},{key:'admin',label:'مصاريف إدارية'},{key:'personal',label:'مصاريف شخصية'},
+  {key:'other',label:'أخرى'},
+];
+const TX_TYPES = [
+  {key:'receipt',label:'قبض من عميل'},{key:'project_expense',label:'مصروف مشروع'},
+  {key:'operating_expense',label:'مصروف تشغيلي عام'},{key:'asset_purchase',label:'شراء أصل / معدات'},
+  {key:'debt_owed_to_me',label:'دين مستحق لي (أعطيت شخصًا)'},{key:'debt_owed_by_me',label:'دين مستحق عليّ'},
+  {key:'debt_repayment_in',label:'تحصيل دين مستحق لي'},{key:'debt_repayment_out',label:'تسديد دين مستحق عليّ'},
+  {key:'capital_in',label:'إضافة رأس مال'},{key:'withdrawal',label:'سحب شخصي'},{key:'transfer',label:'تحويل بين حسابات'},
+];
+const typeLabel = k => (TX_TYPES.find(t=>t.key===k)||{}).label || k;
+const catLabel = k => (EXPENSE_CATS.find(c=>c.key===k)||{}).label || k;
+
+function emptyData(){
+  return {
+    setupDone:false, meta:{currency:'USD'},
+    cash:{cash:0,bank:0,wallets:0}, capital:{initial:0,additions:0,withdrawals:0},
+    clients:[], projects:[], debts:[], transactions:[], nextSeq:1,
+  };
+}
+function loadData(){
+  try{ const raw = localStorage.getItem(STORE_KEY); return raw?JSON.parse(raw):emptyData(); }
+  catch(e){ return emptyData(); }
+}
+function saveData(d){ localStorage.setItem(STORE_KEY, JSON.stringify(d)); }
+
+let DATA = loadData();
+let TAB = 'dashboard';
+let DRAFT = null; // pending transaction confirmation
+let CONFIRM_RESET = false;
+let SETUP_STEP = 0;
+let SETUP_DRAFT = null;
+
+function persist(next){ DATA = next; saveData(DATA); render(); }
+function showToast(msg, tone){
+  const el = document.createElement('div');
+  el.className = 'toast' + (tone==='bad'?' bad':'');
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 3500);
+}
+
+/* ============================ HEURISTIC PARSER ============================
+   يعمل بدون إنترنت وبدون أي API خارجي — يعتمد على كلمات مفتاحية وأرقام.
+   أقل دقة من نموذج ذكاء اصطناعي، لكنه يعطي مسودة قابلة للتعديل قبل الحفظ. */
+function heuristicParse(text, clients, projects){
+  const res = {date: todayISO(), type:'operating_expense', clientName:'', projectName:'',
+    income:'', expenses:[], debtParty:'', debtAmount:'', method:'cash', currency: DATA.meta.currency, notes:text};
+
+  // income
+  const incomeMatch = text.match(/(?:قبضت|استلمت|قبض)\D{0,15}([\d,.]+)/);
+  if(incomeMatch) res.income = num(incomeMatch[1].replace(/,/g,''));
+
+  // expense categories
+  const catPatterns = [
+    ['materials', /مواد\D{0,10}([\d,.]+)|([\d,.]+)\D{0,10}مواد/],
+    ['labor', /أجور\s*عمال\D{0,10}([\d,.]+)|([\d,.]+)\D{0,10}أجور\s*عمال/],
+    ['technicians', /أجور\s*فني(?:ين)?\D{0,10}([\d,.]+)|([\d,.]+)\D{0,10}أجور\s*فني/],
+    ['transport', /نقل\D{0,10}([\d,.]+)|([\d,.]+)\D{0,10}نقل/],
+    ['fuel', /وقود\D{0,10}([\d,.]+)|([\d,.]+)\D{0,10}وقود/],
+    ['tools', /أدوات\D{0,10}([\d,.]+)|معدات\D{0,10}([\d,.]+)/],
+    ['rent', /إيجار\D{0,10}([\d,.]+)/],
+    ['personal', /مصروف\s*شخصي\D{0,10}([\d,.]+)/],
+  ];
+  catPatterns.forEach(([cat, re])=>{
+    const m = text.match(re);
+    if(m){ const amt = m.slice(1).find(g=>g); if(amt) res.expenses.push({category:cat, amount:num(amt.replace(/,/g,''))}); }
+  });
+  // generic "دفعت" without category -> other
+  if(res.expenses.length===0){
+    const paidMatch = text.match(/(?:دفعت|صرفت)\D{0,15}([\d,.]+)/);
+    if(paidMatch) res.expenses.push({category:'other', amount:num(paidMatch[1].replace(/,/g,''))});
+  }
+
+  // client: known name mentioned in text
+  const foundClient = clients.find(c => c.name && text.includes(c.name));
+  if(foundClient) res.clientName = foundClient.name;
+  else{
+    const m = text.match(/من\s+([\u0600-\u06FF]+)/);
+    if(m) res.clientName = m[1];
+  }
+  // project: known name mentioned, else after "مشروع"
+  const foundProject = projects.find(p => p.name && text.includes(p.name));
+  if(foundProject) res.projectName = foundProject.name;
+  else{
+    const m = text.match(/مشروع\s+([\u0600-\u06FF\s]{2,20}?)(?:[,.،]|$)/);
+    if(m) res.projectName = 'مشروع ' + m[1].trim();
+  }
+
+  if(res.income && res.expenses.length===0) res.type='receipt';
+  else if(res.expenses.length>0 && res.projectName) res.type='project_expense';
+  else if(res.expenses.length>0) res.type='operating_expense';
+
+  const currencyMatch = text.match(/(USD|EUR|SYP|دولار|يورو)/);
+  if(currencyMatch){
+    const c = currencyMatch[1];
+    res.currency = c==='دولار' ? 'USD' : c==='يورو' ? 'EUR' : c;
+  }
+  return res;
+}
+
+/* ============================ AGGREGATES ============================ */
+function computeAggregates(data){
+  const cur = data.meta.currency;
+  const cashBalance = num(data.cash.cash) + num(data.cash.bank) + num(data.cash.wallets);
+  const projects = data.projects.map(p=>{
+    const totalCost = Object.values(p.costs||{}).reduce((a,b)=>a+num(b),0);
+    const profit = num(p.contractValue) - totalCost;
+    const remaining = num(p.contractValue) - num(p.received);
+    return {...p, totalCost, profit, remaining};
+  });
+  const activeProjects = projects.filter(p=>p.status!=='مكتمل'&&p.status!=='ملغى');
+  const completedProjects = projects.filter(p=>p.status==='مكتمل');
+  const stoppedProjects = projects.filter(p=>p.status==='متوقف');
+  const totalReceivablesFromClients = projects.reduce((a,p)=>a+Math.max(p.remaining,0),0);
+  const debtsOwedToMe = data.debts.filter(d=>d.direction==='owed_to_me').reduce((a,d)=>a+num(d.remaining),0);
+  const debtsOwedByMe = data.debts.filter(d=>d.direction==='owed_by_me').reduce((a,d)=>a+num(d.remaining),0);
+  const now = new Date(); const thisMonth = now.toISOString().slice(0,7); const thisYear = now.toISOString().slice(0,4);
+  const txM = data.transactions.filter(t=>t.date && t.date.slice(0,7)===thisMonth);
+  const txY = data.transactions.filter(t=>t.date && t.date.slice(0,4)===thisYear);
+  const monthIncome = txM.reduce((a,t)=>a+num(t.income),0), monthExpense = txM.reduce((a,t)=>a+num(t.expense),0);
+  const yearIncome = txY.reduce((a,t)=>a+num(t.income),0), yearExpense = txY.reduce((a,t)=>a+num(t.expense),0);
+  const totalProjectProfit = projects.reduce((a,p)=>a+p.profit,0);
+  const netCapital = num(data.capital.initial)+num(data.capital.additions)-num(data.capital.withdrawals)+totalProjectProfit;
+  return {cur, cashBalance, projects, activeProjects, completedProjects, stoppedProjects,
+    totalReceivablesFromClients, debtsOwedToMe, debtsOwedByMe,
+    monthIncome, monthExpense, monthNet: monthIncome-monthExpense,
+    yearIncome, yearExpense, yearNet: yearIncome-yearExpense,
+    totalProjectProfit, netCapital};
+}
+
+/* ============================ ICONS (inline svg) ============================ */
+const ICONS = {
+  wallet:'<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>',
+  plus:'<path d="M5 12h14"/><path d="M12 5v14"/>',
+  building:'<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M8 10h.01M16 10h.01M8 14h.01M16 14h.01"/>',
+  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  credit:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+  file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/>',
+  trend:'<path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  x:'<path d="M18 6 6 18"/><path d="M6 6l12 12"/>',
+  down:'<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
+  up:'<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>',
+  warn:'<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  landmark:'<path d="M3 22h18"/><path d="M6 18v-9"/><path d="M10 18v-9"/><path d="M14 18v-9"/><path d="M18 18v-9"/><path d="M12 2 3 7h18Z"/>',
+};
+function icon(name, size=16){ return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`; }
+
+/* ============================ RENDER: TABS ============================ */
+const TABS = [
+  {key:'dashboard', label:'الوضع', icon:'wallet'},
+  {key:'add', label:'عملية', icon:'plus'},
+  {key:'projects', label:'مشاريع', icon:'building'},
+  {key:'clients', label:'زبائن', icon:'users'},
+  {key:'debts', label:'ديون', icon:'credit'},
+  {key:'ledger', label:'السجل', icon:'file'},
+  {key:'reports', label:'تقارير', icon:'trend'},
+  {key:'settings', label:'إعدادات', icon:'settings'},
+];
+function renderTabs(){
+  const tabsEl = document.getElementById('tabs');
+  if(!DATA.setupDone){ tabsEl.innerHTML=''; return; }
+  tabsEl.innerHTML = `<div class="wrap">${TABS.map(t=>`
+    <button class="${TAB===t.key?'active':''}" onclick="setTab('${t.key}')">${icon(t.icon,17)}<span>${t.label}</span></button>
+  `).join('')}</div>`;
+}
+function setTab(t){ TAB=t; DRAFT=null; render(); window.scrollTo(0,0); }
+
+/* ============================ MAIN RENDER ============================ */
+function render(){
+  renderTabs();
+  const app = document.getElementById('app');
+  if(!DATA.setupDone){ app.innerHTML = renderSetup(); return; }
+  let html = '';
+  if(TAB==='dashboard') html = renderDashboard();
+  else if(TAB==='add') html = renderAdd();
+  else if(TAB==='projects') html = renderProjects();
+  else if(TAB==='clients') html = renderClients();
+  else if(TAB==='debts') html = renderDebts();
+  else if(TAB==='ledger') html = renderLedger();
+  else if(TAB==='reports') html = renderReports();
+  else if(TAB==='settings') html = renderSettings();
+  app.innerHTML = html;
+}
+
+/* ============================ SETUP WIZARD ============================ */
+function initSetupDraft(){ if(!SETUP_DRAFT) SETUP_DRAFT = emptyData(); }
+function renderSetup(){
+  initSetupDraft();
+  const d = SETUP_DRAFT;
+  const steps = ['رأس المال والسيولة','العملاء الحاليون (اختياري)','المشاريع الحالية (اختياري)','الديون (اختياري)'];
+  let body = '';
+  if(SETUP_STEP===0){
+    body = `
+      <label class="field"><span>رأس المال الحالي</span><input type="number" value="${d.capital.initial}" oninput="SETUP_DRAFT.capital.initial=this.value"></label>
+      <label class="field"><span>رصيد الصندوق (نقد)</span><input type="number" value="${d.cash.cash}" oninput="SETUP_DRAFT.cash.cash=this.value"></label>
+      <label class="field"><span>الرصيد البنكي</span><input type="number" value="${d.cash.bank}" oninput="SETUP_DRAFT.cash.bank=this.value"></label>
+      <label class="field"><span>محافظ إلكترونية</span><input type="number" value="${d.cash.wallets}" oninput="SETUP_DRAFT.cash.wallets=this.value"></label>
+      <label class="field"><span>العملة الأساسية</span>
+        <select onchange="SETUP_DRAFT.meta.currency=this.value">
+          <option value="USD" ${d.meta.currency==='USD'?'selected':''}>USD</option>
+          <option value="EUR" ${d.meta.currency==='EUR'?'selected':''}>EUR</option>
+          <option value="SYP" ${d.meta.currency==='SYP'?'selected':''}>SYP</option>
+        </select>
+      </label>`;
+  } else if(SETUP_STEP===1){
+    body = renderListEditor(d.clients, [{key:'name',label:'اسم الزبون'},{key:'contact',label:'تواصل'}], 'setupClient');
+  } else if(SETUP_STEP===2){
+    body = renderListEditor(d.projects, [{key:'name',label:'اسم المشروع'},{key:'clientName',label:'الزبون'},{key:'contractValue',label:'قيمة العقد',type:'number'},{key:'received',label:'المقبوض حتى الآن',type:'number'}], 'setupProject');
+  } else if(SETUP_STEP===3){
+    body = renderListEditor(d.debts, [{key:'party',label:'الطرف'},{key:'direction',label:'الاتجاه',type:'select',options:[{v:'owed_to_me',l:'مستحق لي'},{v:'owed_by_me',l:'مستحق عليّ'}]},{key:'original',label:'المبلغ الأصلي',type:'number'},{key:'paid',label:'المدفوع',type:'number'}], 'setupDebt');
+  }
+  return `<div class="card"><div class="pad">
+    <div class="step-label">الإعداد الأولي · خطوة ${SETUP_STEP+1} من ${steps.length}</div>
+    <h2 class="step-title">${steps[SETUP_STEP]}</h2>
+    ${body}
+    <div class="row" style="margin-top:18px">
+      ${SETUP_STEP>0?`<button class="btn btn-ghost" onclick="setupStep(-1)">السابق</button>`:''}
+      ${SETUP_STEP<3?`<button class="btn btn-primary flex1" onclick="setupStep(1)">التالي</button>`:`<button class="btn btn-primary flex1" onclick="finishSetup()">${icon('check')} بدء النظام</button>`}
+    </div>
+  </div></div>`;
+}
+function setupStep(dir){ SETUP_STEP += dir; render(); }
+function renderListEditor(items, fields, prefix){
+  if(items.length===0){
+    return `<div class="muted" style="margin-bottom:10px">لا توجد عناصر — يمكنك تخطي هذه الخطوة وإضافتها لاحقًا.</div>
+    <button class="btn btn-ghost" onclick="${prefix}Add()">${icon('plus',14)} إضافة</button>`;
+  }
+  return items.map((it,idx)=>`
+    <div class="item-card">
+      <div class="item-head"><span class="muted">عنصر ${idx+1}</span><button class="x-btn" onclick="${prefix}Remove(${idx})">${icon('x',14)}</button></div>
+      ${fields.map(f=>{
+        if(f.type==='select'){
+          return `<label class="field"><span>${f.label}</span><select onchange="${prefix}Update(${idx},'${f.key}',this.value)">
+            ${f.options.map(o=>`<option value="${o.v}" ${it[f.key]===o.v?'selected':''}>${o.l}</option>`).join('')}
+          </select></label>`;
+        }
+        return `<label class="field"><span>${f.label}</span><input type="${f.type==='number'?'number':'text'}" value="${it[f.key]??''}" oninput="${prefix}Update(${idx},'${f.key}',this.value)"></label>`;
+      }).join('')}
+    </div>
+  `).join('') + `<button class="btn btn-ghost" onclick="${prefix}Add()">${icon('plus',14)} إضافة</button>`;
+}
+// setup client
+function setupClientAdd(){ SETUP_DRAFT.clients.push({id:uid(),name:'',contact:'',notes:''}); render(); }
+function setupClientUpdate(i,k,v){ SETUP_DRAFT.clients[i][k]=v; }
+function setupClientRemove(i){ SETUP_DRAFT.clients.splice(i,1); render(); }
+// setup project
+function setupProjectAdd(){ SETUP_DRAFT.projects.push({id:uid(),name:'',clientId:null,clientName:'',description:'',startDate:todayISO(),endDate:'',status:'قيد التنفيذ',contractValue:0,received:0,costs:{materials:0,labor:0,technicians:0,transport:0,fuel:0,tools:0,maintenance:0,rent:0,utilities:0,marketing:0,admin:0,personal:0,other:0},notes:''}); render(); }
+function setupProjectUpdate(i,k,v){ SETUP_DRAFT.projects[i][k]= (k==='contractValue'||k==='received') ? num(v) : v; }
+function setupProjectRemove(i){ SETUP_DRAFT.projects.splice(i,1); render(); }
+// setup debt
+function setupDebtAdd(){ SETUP_DRAFT.debts.push({id:uid(),party:'',direction:'owed_to_me',original:0,paid:0,remaining:0,dueDate:'',reason:'',status:'قائم'}); render(); }
+function setupDebtUpdate(i,k,v){ SETUP_DRAFT.debts[i][k]= (k==='original'||k==='paid') ? num(v) : v; }
+function setupDebtRemove(i){ SETUP_DRAFT.debts.splice(i,1); render(); }
+
+function finishSetup(){
+  const d = SETUP_DRAFT;
+  d.capital.initial = num(d.capital.initial);
+  d.cash.cash = num(d.cash.cash); d.cash.bank = num(d.cash.bank); d.cash.wallets = num(d.cash.wallets);
+  const clients = [...d.clients];
+  const projects = d.projects.map(p=>{
+    let client = clients.find(c=>c.name===p.clientName);
+    if(!client && p.clientName){ client = {id:uid(), name:p.clientName, contact:'', notes:''}; clients.push(client); }
+    return {...p, clientId: client?client.id:null, remaining: num(p.contractValue)-num(p.received)};
+  });
+  const debts = d.debts.map(deb=>({...deb, remaining: num(deb.original)-num(deb.paid)}));
+  d.clients = clients; d.projects = projects; d.debts = debts; d.setupDone = true;
+  SETUP_DRAFT = null; SETUP_STEP = 0;
+  persist(d);
+  showToast('تم إنشاء الرصيد الافتتاحي ✅');
+  setTab('dashboard');
+}
+
+/* ============================ DASHBOARD ============================ */
+function renderDashboard(){
+  const a = computeAggregates(DATA);
+  return `
+  <div class="card"><div class="section-title"><span class="dot"></span>${icon('wallet')} السيولة</div>
+    <div class="grid2 divider-row">
+      <div><span class="stat-label">الصندوق (نقد)</span><span class="stat-value mono">${fmt(DATA.cash.cash,a.cur)}</span></div>
+      <div><span class="stat-label">البنك</span><span class="stat-value mono">${fmt(DATA.cash.bank,a.cur)}</span></div>
+    </div>
+    <div class="divider-row" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;">
+      <span class="muted" style="font-weight:600">إجمالي السيولة</span>
+      <span class="mono" style="font-weight:700">${fmt(a.cashBalance,a.cur)}</span>
+    </div>
+  </div>
+  <div class="card"><div class="section-title"><span class="dot"></span>${icon('trend')} الأرباح</div>
+    <div class="grid2 divider-row">
+      <div><span class="stat-label">صافي حركة الشهر</span><span class="stat-value mono ${a.monthNet>=0?'good':'bad'}">${fmt(a.monthNet,a.cur)}</span></div>
+      <div><span class="stat-label">صافي حركة السنة</span><span class="stat-value mono ${a.yearNet>=0?'good':'bad'}">${fmt(a.yearNet,a.cur)}</span></div>
+    </div>
+    <div class="divider-row"><div><span class="stat-label">إجمالي ربح المشاريع (حسب التكلفة الفعلية)</span><span class="stat-value mono ${a.totalProjectProfit>=0?'good':'bad'}">${fmt(a.totalProjectProfit,a.cur)}</span></div></div>
+  </div>
+  <div class="card"><div class="section-title"><span class="dot"></span>${icon('users')} العملاء</div>
+    <div class="grid2 divider-row">
+      <div><span class="stat-label">إجمالي العملاء</span><span class="stat-value mono">${DATA.clients.length}</span></div>
+      <div><span class="stat-label">ذمم مستحقة لي (من المشاريع)</span><span class="stat-value mono">${fmt(a.totalReceivablesFromClients,a.cur)}</span></div>
+    </div>
+  </div>
+  <div class="card"><div class="section-title"><span class="dot"></span>${icon('credit')} الديون</div>
+    <div class="grid2 divider-row">
+      <div><span class="stat-label">مستحق لي</span><span class="stat-value mono good">${fmt(a.debtsOwedToMe,a.cur)}</span></div>
+      <div><span class="stat-label">مستحق عليّ</span><span class="stat-value mono bad">${fmt(a.debtsOwedByMe,a.cur)}</span></div>
+    </div>
+  </div>
+  <div class="card"><div class="section-title"><span class="dot"></span>${icon('building')} المشاريع</div>
+    <div class="grid3" style="padding:12px 16px;border-top:1px solid var(--line);">
+      <div class="mini"><div class="l">قيد التنفيذ</div><div class="v">${a.activeProjects.length}</div></div>
+      <div class="mini"><div class="l">مكتملة</div><div class="v">${a.completedProjects.length}</div></div>
+      <div class="mini"><div class="l">متوقفة</div><div class="v">${a.stoppedProjects.length}</div></div>
+    </div>
+  </div>
+  <div class="card"><div class="section-title"><span class="dot"></span>${icon('landmark')} رأس المال</div>
+    <div class="grid2 divider-row">
+      <div><span class="stat-label">رأس المال الابتدائي</span><span class="stat-value mono">${fmt(DATA.capital.initial,a.cur)}</span></div>
+      <div><span class="stat-label">السحوبات</span><span class="stat-value mono">${fmt(DATA.capital.withdrawals,a.cur)}</span></div>
+    </div>
+    <div class="divider-row"><div><span class="stat-label">رأس المال الحالي (تقديري)</span><span class="stat-value mono">${fmt(a.netCapital,a.cur)}</span></div></div>
+  </div>`;
+}
+
+/* ============================ ADD TRANSACTION ============================ */
+let ADD_TEXT = '';
+function renderAdd(){
+  let draftHtml = '';
+  if(DRAFT){
+    const d = DRAFT;
+    draftHtml = `
+    <div class="card"><div class="pad">
+      <div class="section-title" style="padding:0 0 10px">${icon('file')} تأكيد العملية قبل الحفظ</div>
+      <label class="field"><span>نوع العملية</span><select onchange="DRAFT.type=this.value">
+        ${TX_TYPES.map(t=>`<option value="${t.key}" ${d.type===t.key?'selected':''}>${t.label}</option>`).join('')}
+      </select></label>
+      <div class="grid2" style="gap:8px">
+        <label class="field"><span>التاريخ</span><input type="date" value="${d.date}" oninput="DRAFT.date=this.value"></label>
+        <label class="field"><span>طريقة الدفع</span><select onchange="DRAFT.method=this.value">
+          <option value="cash" ${d.method==='cash'?'selected':''}>نقدًا</option>
+          <option value="bank" ${d.method==='bank'?'selected':''}>بنك</option>
+        </select></label>
+      </div>
+      <div class="grid2" style="gap:8px">
+        <label class="field"><span>الزبون (اختياري)</span><input value="${d.clientName}" oninput="DRAFT.clientName=this.value"></label>
+        <label class="field"><span>المشروع (اختياري)</span><input value="${d.projectName}" oninput="DRAFT.projectName=this.value"></label>
+      </div>
+      <label class="field"><span>المبلغ المقبوض</span><input type="number" value="${d.income}" oninput="DRAFT.income=this.value"></label>
+      <div style="margin-bottom:8px"><span style="font-size:12px;font-weight:500;color:#5B5340">المصاريف</span></div>
+      ${d.expenses.map((e,i)=>`
+        <div class="row" style="margin-bottom:8px;align-items:center">
+          <select onchange="draftExpenseUpdate(${i},'category',this.value)" style="flex:1">
+            ${EXPENSE_CATS.map(c=>`<option value="${c.key}" ${e.category===c.key?'selected':''}>${c.label}</option>`).join('')}
+          </select>
+          <input type="number" value="${e.amount}" oninput="draftExpenseUpdate(${i},'amount',this.value)" style="flex:1">
+          <button class="x-btn" onclick="draftExpenseRemove(${i})">${icon('x',16)}</button>
+        </div>`).join('')}
+      <button class="btn btn-ghost" onclick="draftExpenseAdd()">${icon('plus',14)} إضافة بند مصروف</button>
+      ${['debt_owed_to_me','debt_owed_by_me','debt_repayment_in','debt_repayment_out'].includes(d.type)?`
+      <div class="grid2" style="gap:8px;margin-top:10px">
+        <label class="field"><span>الطرف</span><input value="${d.debtParty}" oninput="DRAFT.debtParty=this.value"></label>
+        <label class="field"><span>مبلغ الدين</span><input type="number" value="${d.debtAmount}" oninput="DRAFT.debtAmount=this.value"></label>
+      </div>`:''}
+      <label class="field" style="margin-top:10px"><span>ملاحظات</span><input value="${d.notes}" oninput="DRAFT.notes=this.value"></label>
+      <div class="row" style="margin-top:8px">
+        <button class="btn btn-ghost" onclick="DRAFT=null;render()">إلغاء</button>
+        <button class="btn btn-primary flex1" onclick="commitTransaction()">${icon('check')} تأكيد وحفظ</button>
+      </div>
+    </div></div>`;
+  }
+  return `
+  <div class="card"><div class="pad">
+    <div class="section-title" style="padding:0 0 10px">إضافة عملية بنص طبيعي</div>
+    <textarea placeholder="مثال: اليوم قبضت 3000 دولار من أحمد لمشروع الفيلا، ودفعت 800 دولار للمواد و200 دولار أجور عمال." oninput="ADD_TEXT=this.value">${ADD_TEXT}</textarea>
+    <div class="row" style="margin-top:10px">
+      <button class="btn btn-primary flex1" onclick="parseText()">${icon('check',16)} تحليل وتسجيل</button>
+      <button class="btn btn-ghost" onclick="manualStart()">إدخال يدوي</button>
+    </div>
+    <div class="warn">${icon('warn',14)} التحليل هنا يعتمد على كلمات مفتاحية (بدون إنترنت) — راجع الحقول دائمًا قبل الحفظ.</div>
+  </div></div>
+  ${draftHtml}`;
+}
+function parseText(){
+  if(!ADD_TEXT.trim()) return;
+  DRAFT = heuristicParse(ADD_TEXT, DATA.clients, DATA.projects);
+  render();
+}
+function manualStart(){
+  DRAFT = {date:todayISO(), type:'operating_expense', clientName:'', projectName:'', income:'', expenses:[], debtParty:'', debtAmount:'', method:'cash', currency:DATA.meta.currency, notes:''};
+  render();
+}
+function draftExpenseAdd(){ DRAFT.expenses.push({category:'other', amount:''}); render(); }
+function draftExpenseUpdate(i,k,v){ DRAFT.expenses[i][k]=v; }
+function draftExpenseRemove(i){ DRAFT.expenses.splice(i,1); render(); }
+
+function commitTransaction(){
+  const d = DRAFT;
+  const next = clone(DATA);
+  const totalExpense = d.expenses.reduce((a,e)=>a+num(e.amount),0);
+  const income = num(d.income);
+
+  let client = null;
+  if(d.clientName){
+    client = next.clients.find(c=>c.name===d.clientName);
+    if(!client){ client = {id:uid(), name:d.clientName, contact:'', notes:''}; next.clients.push(client); }
+  }
+  let project = null;
+  if(d.projectName){
+    project = next.projects.find(p=>p.name===d.projectName);
+    if(!project){
+      project = {id:uid(), name:d.projectName, clientId: client?client.id:null, clientName: d.clientName||'غير محدد',
+        description:'', startDate:d.date, endDate:'', status:'قيد التنفيذ', contractValue:0, received:0,
+        costs:{materials:0,labor:0,technicians:0,transport:0,fuel:0,tools:0,maintenance:0,rent:0,utilities:0,marketing:0,admin:0,personal:0,other:0}, notes:''};
+      next.projects.push(project);
+    }
+    if(income) project.received = num(project.received) + income;
+    d.expenses.forEach(e=>{ project.costs[e.category] = num(project.costs[e.category]) + num(e.amount); });
+  }
+
+  const pool = d.method==='bank' ? 'bank' : 'cash';
+  if(income) next.cash[pool] = num(next.cash[pool]) + income;
+  if(totalExpense) next.cash[pool] = num(next.cash[pool]) - totalExpense;
+
+  if(d.type==='debt_owed_to_me' && d.debtAmount){
+    next.debts.push({id:uid(), party:d.debtParty||'غير محدد', direction:'owed_to_me', original:num(d.debtAmount), paid:0, remaining:num(d.debtAmount), dueDate:'', reason:d.notes, status:'قائم'});
+  }
+  if(d.type==='debt_owed_by_me' && d.debtAmount){
+    next.debts.push({id:uid(), party:d.debtParty||'غير محدد', direction:'owed_by_me', original:num(d.debtAmount), paid:0, remaining:num(d.debtAmount), dueDate:'', reason:d.notes, status:'قائم'});
+  }
+  if(d.type==='debt_repayment_in' || d.type==='debt_repayment_out'){
+    const dir = d.type==='debt_repayment_in' ? 'owed_to_me' : 'owed_by_me';
+    const deb = next.debts.find(x=>x.party===d.debtParty && x.direction===dir && num(x.remaining)>0);
+    if(deb){
+      const amt = num(d.debtAmount) || income || totalExpense;
+      deb.paid = num(deb.paid) + amt;
+      deb.remaining = Math.max(num(deb.original)-num(deb.paid),0);
+      if(deb.remaining===0) deb.status='مسدد';
+    }
+  }
+  if(d.type==='capital_in') next.capital.additions = num(next.capital.additions) + (income || num(d.debtAmount));
+  if(d.type==='withdrawal') next.capital.withdrawals = num(next.capital.withdrawals) + (totalExpense || income);
+
+  const seq = next.nextSeq;
+  next.transactions.push({id:uid(), seq, date:d.date, type:d.type, description:d.notes,
+    clientId: client?client.id:null, clientName: client?client.name:'',
+    projectId: project?project.id:null, projectName: project?project.name:'',
+    income, expense: totalExpense, method:d.method, currency:d.currency, notes:d.notes});
+  next.nextSeq = seq+1;
+
+  DATA = next; saveData(DATA);
+  showToast(`تم تسجيل العملية ✅ — رصيد الصندوق: ${fmt(next.cash.cash, next.meta.currency)}`);
+  DRAFT = null; ADD_TEXT='';
+  render();
+}
+
+/* ============================ PROJECTS ============================ */
+function renderProjects(){
+  const a = computeAggregates(DATA);
+  if(DATA.projects.length===0) return `<div class="card"><div class="empty">لا توجد مشاريع بعد. أضف عملية مرتبطة بمشروع جديد من تبويب "عملية".</div></div>`;
+  const cur = DATA.meta.currency;
+  return a.projects.map(p=>`
+    <div class="card"><div class="pad">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div style="font-weight:700;font-size:15px">${p.name}</div><div class="muted">${p.clientName||'غير محدد'}</div></div>
+        <select class="status-select" onchange="updateProjectStatus('${p.id}',this.value)">
+          ${['جديد','قيد التنفيذ','متوقف','مكتمل','ملغى'].map(s=>`<option value="${s}" ${p.status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div class="grid3" style="margin-top:10px">
+        <div class="mini"><div class="l">العقد</div><div class="v">${fmt(p.contractValue,cur)}</div></div>
+        <div class="mini"><div class="l">المقبوض</div><div class="v">${fmt(p.received,cur)}</div></div>
+        <div class="mini"><div class="l">المتبقي</div><div class="v ${p.remaining>0?'bad':'good'}">${fmt(p.remaining,cur)}</div></div>
+        <div class="mini"><div class="l">التكلفة</div><div class="v">${fmt(p.totalCost,cur)}</div></div>
+        <div class="mini"><div class="l">الربح</div><div class="v ${p.profit>=0?'good':'bad'}">${fmt(p.profit,cur)}</div></div>
+        <div class="mini"><div class="l">هامش الربح</div><div class="v">${p.contractValue?((p.profit/p.contractValue)*100).toFixed(0)+'%':'—'}</div></div>
+      </div>
+    </div></div>`).join('');
+}
+function updateProjectStatus(id, status){
+  const next = clone(DATA);
+  const p = next.projects.find(x=>x.id===id);
+  if(p) p.status = status;
+  DATA = next; saveData(DATA); render();
+}
+
+/* ============================ CLIENTS ============================ */
+function renderClients(){
+  if(DATA.clients.length===0) return `<div class="card"><div class="empty">لا يوجد زبائن بعد.</div></div>`;
+  const cur = DATA.meta.currency;
+  return DATA.clients.map(c=>{
+    const projects = DATA.projects.filter(p=>p.clientId===c.id);
+    const totalValue = projects.reduce((a,p)=>a+num(p.contractValue),0);
+    const totalReceived = projects.reduce((a,p)=>a+num(p.received),0);
+    const remaining = totalValue - totalReceived;
+    return `<div class="card"><div class="pad">
+      <div style="font-weight:700;font-size:15px">${c.name}</div>
+      ${c.contact?`<div class="muted">${c.contact}</div>`:''}
+      <div class="grid3" style="margin-top:10px">
+        <div class="mini"><div class="l">إجمالي الأعمال</div><div class="v">${fmt(totalValue,cur)}</div></div>
+        <div class="mini"><div class="l">المقبوض</div><div class="v">${fmt(totalReceived,cur)}</div></div>
+        <div class="mini"><div class="l">المتبقي</div><div class="v ${remaining>0?'bad':'good'}">${fmt(remaining,cur)}</div></div>
+      </div>
+      ${projects.length?`<div class="muted" style="margin-top:8px">المشاريع: ${projects.map(p=>p.name).join('، ')}</div>`:''}
+    </div></div>`;
+  }).join('');
+}
+
+/* ============================ DEBTS ============================ */
+function renderDebts(){
+  const cur = DATA.meta.currency;
+  const owedToMe = DATA.debts.filter(d=>d.direction==='owed_to_me');
+  const owedByMe = DATA.debts.filter(d=>d.direction==='owed_by_me');
+  const row = d => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line2)">
+    <div><div style="font-size:13px;font-weight:500">${d.party}</div>${d.reason?`<div class="muted">${d.reason}</div>`:''}</div>
+    <div style="text-align:left"><div class="mono" style="font-size:13px;font-weight:600">${fmt(d.remaining,cur)}</div><div class="muted" style="font-size:10px">من أصل ${fmt(d.original,cur)}</div></div>
+  </div>`;
+  return `
+  <div class="card"><div class="pad">
+    <div class="section-title" style="padding:0 0 8px">${icon('down')} مستحق لي</div>
+    ${owedToMe.length===0?`<div class="muted" style="font-size:14px">لا يوجد</div>`:owedToMe.map(row).join('')}
+  </div></div>
+  <div class="card"><div class="pad">
+    <div class="section-title" style="padding:0 0 8px">${icon('up')} مستحق عليّ</div>
+    ${owedByMe.length===0?`<div class="muted" style="font-size:14px">لا يوجد</div>`:owedByMe.map(row).join('')}
+  </div></div>`;
+}
+
+/* ============================ LEDGER ============================ */
+function renderLedger(){
+  const cur = DATA.meta.currency;
+  const rows = [...DATA.transactions].sort((a,b)=>b.seq-a.seq);
+  if(rows.length===0) return `<div class="card"><div class="empty">السجل فارغ حتى الآن.</div></div>`;
+  return `<div class="card" style="overflow:hidden"><div style="max-height:70vh;overflow-y:auto">
+    ${rows.map(t=>`
+      <div class="ledger-row">
+        <div>
+          <div class="muted">#${t.seq} · ${t.date} · ${typeLabel(t.type)}</div>
+          <div style="font-size:13px">${t.clientName?`<span style="font-weight:500">${t.clientName}</span>`:''}${t.projectName?`<span class="muted"> — ${t.projectName}</span>`:''}</div>
+          ${t.notes?`<div class="muted">${t.notes}</div>`:''}
+        </div>
+        <div style="text-align:left;flex-shrink:0;padding-right:4px">
+          ${t.income>0?`<div class="mono good" style="font-size:13px;font-weight:600">+${fmt(t.income,cur)}</div>`:''}
+          ${t.expense>0?`<div class="mono bad" style="font-size:13px;font-weight:600">-${fmt(t.expense,cur)}</div>`:''}
+        </div>
+      </div>`).join('')}
+  </div></div>`;
+}
+
+/* ============================ REPORTS ============================ */
+function renderReports(){
+  const cur = DATA.meta.currency;
+  const now = new Date(); const thisMonth = now.toISOString().slice(0,7);
+  const txM = DATA.transactions.filter(t=>t.date && t.date.slice(0,7)===thisMonth);
+  const income = txM.reduce((a,t)=>a+num(t.income),0), expense = txM.reduce((a,t)=>a+num(t.expense),0);
+  const byCategory = {};
+  DATA.projects.forEach(p=>Object.entries(p.costs||{}).forEach(([k,v])=>{ byCategory[k]=(byCategory[k]||0)+num(v); }));
+  const topClients = DATA.clients.map(c=>{
+    const projects = DATA.projects.filter(p=>p.clientId===c.id);
+    return {name:c.name, value: projects.reduce((a,p)=>a+num(p.contractValue),0)};
+  }).sort((a,b)=>b.value-a.value).slice(0,5);
+  const topProjects = DATA.projects.map(p=>{
+    const totalCost = Object.values(p.costs||{}).reduce((a,b)=>a+num(b),0);
+    return {name:p.name, profit: num(p.contractValue)-totalCost};
+  }).sort((a,b)=>b.profit-a.profit).slice(0,5);
+
+  return `
+  <div class="card"><div class="pad">
+    <div class="section-title" style="padding:0 0 10px">${icon('trend')} تقرير هذا الشهر</div>
+    <div class="grid3">
+      <div class="mini"><div class="l">مقبوضات</div><div class="v good">${fmt(income,cur)}</div></div>
+      <div class="mini"><div class="l">مصروفات</div><div class="v bad">${fmt(expense,cur)}</div></div>
+      <div class="mini"><div class="l">صافي</div><div class="v ${income-expense>=0?'good':'bad'}">${fmt(income-expense,cur)}</div></div>
+    </div>
+  </div></div>
+  <div class="card"><div class="pad">
+    <div class="section-title" style="padding:0 0 10px">${icon('file')} المصاريف حسب الفئة</div>
+    ${Object.entries(byCategory).filter(([,v])=>v>0).length===0?`<div class="muted" style="font-size:14px">لا توجد بيانات</div>`:
+    Object.entries(byCategory).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0">
+        <span>${catLabel(k)}</span><span class="mono" style="font-weight:500">${fmt(v,cur)}</span>
+      </div>`).join('')}
+  </div></div>
+  <div class="card"><div class="pad">
+    <div class="section-title" style="padding:0 0 10px">${icon('building')} أكثر المشاريع ربحية</div>
+    ${topProjects.length===0?`<div class="muted" style="font-size:14px">لا توجد بيانات</div>`:
+    topProjects.map(p=>`<div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0">
+      <span>${p.name}</span><span class="mono good" style="font-weight:500">${fmt(p.profit,cur)}</span></div>`).join('')}
+  </div></div>
+  <div class="card"><div class="pad">
+    <div class="section-title" style="padding:0 0 10px">${icon('users')} أكثر العملاء تعاملًا</div>
+    ${topClients.length===0?`<div class="muted" style="font-size:14px">لا توجد بيانات</div>`:
+    topClients.map(c=>`<div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0">
+      <span>${c.name}</span><span class="mono" style="font-weight:500">${fmt(c.value,cur)}</span></div>`).join('')}
+  </div></div>`;
+}
+
+/* ============================ EXCEL EXPORT ============================ */
+function arDate(){ return new Date().toISOString().slice(0,10); }
+function downloadWorkbook(wb, filename){
+  if(typeof XLSX === 'undefined'){
+    showToast('تعذّر تحميل مكتبة Excel — تحتاج اتصال إنترنت أول مرة لهذه الميزة', 'bad');
+    return;
+  }
+  XLSX.writeFile(wb, filename);
+  showToast('تم تصدير الملف ✅');
+}
+function sheetFromRows(rows){ return XLSX.utils.json_to_sheet(rows); }
+
+function ledgerRows(){
+  const cur = DATA.meta.currency;
+  return [...DATA.transactions].sort((a,b)=>a.seq-b.seq).map(t=>({
+    'رقم': t.seq, 'التاريخ': t.date, 'النوع': typeLabel(t.type),
+    'العميل': t.clientName||'', 'المشروع': t.projectName||'',
+    'دخل': t.income||0, 'خرج': t.expense||0, 'طريقة الدفع': t.method==='bank'?'بنك':'نقدًا',
+    'العملة': t.currency||cur, 'ملاحظات': t.notes||'',
+  }));
+}
+function projectRows(){
+  const a = computeAggregates(DATA); const cur = DATA.meta.currency;
+  return a.projects.map(p=>({
+    'المشروع': p.name, 'الزبون': p.clientName||'غير محدد', 'الحالة': p.status,
+    'قيمة العقد': p.contractValue||0, 'المقبوض': p.received||0, 'المتبقي': p.remaining||0,
+    'تكلفة المواد': p.costs.materials||0, 'أجور عمال': p.costs.labor||0, 'أجور فنيين': p.costs.technicians||0,
+    'نقل': p.costs.transport||0, 'وقود': p.costs.fuel||0, 'أدوات': p.costs.tools||0,
+    'إجمالي التكلفة': p.totalCost||0, 'الربح': p.profit||0,
+    'هامش الربح %': p.contractValue ? ((p.profit/p.contractValue)*100).toFixed(1) : '',
+    'العملة': cur,
+  }));
+}
+function clientRows(){
+  const cur = DATA.meta.currency;
+  return DATA.clients.map(c=>{
+    const projects = DATA.projects.filter(p=>p.clientId===c.id);
+    const totalValue = projects.reduce((a,p)=>a+num(p.contractValue),0);
+    const totalReceived = projects.reduce((a,p)=>a+num(p.received),0);
+    return {
+      'الزبون': c.name, 'تواصل': c.contact||'', 'عدد المشاريع': projects.length,
+      'إجمالي الأعمال': totalValue, 'إجمالي المقبوض': totalReceived, 'المتبقي': totalValue-totalReceived,
+      'العملة': cur,
+    };
+  });
+}
+function debtRows(direction){
+  const cur = DATA.meta.currency;
+  return DATA.debts.filter(d=>!direction || d.direction===direction).map(d=>({
+    'الطرف': d.party, 'الاتجاه': d.direction==='owed_to_me'?'مستحق لي':'مستحق عليّ',
+    'المبلغ الأصلي': d.original||0, 'المدفوع': d.paid||0, 'المتبقي': d.remaining||0,
+    'السبب': d.reason||'', 'الحالة': d.status||'', 'العملة': cur,
+  }));
+}
+function summaryRows(){
+  const a = computeAggregates(DATA); const cur = DATA.meta.currency;
+  return [
+    {'البند':'تاريخ التقرير','القيمة': arDate()},
+    {'البند':'الصندوق (نقد)','القيمة': DATA.cash.cash},
+    {'البند':'البنك','القيمة': DATA.cash.bank},
+    {'البند':'إجمالي السيولة','القيمة': a.cashBalance},
+    {'البند':'صافي حركة الشهر','القيمة': a.monthNet},
+    {'البند':'صافي حركة السنة','القيمة': a.yearNet},
+    {'البند':'إجمالي ربح المشاريع','القيمة': a.totalProjectProfit},
+    {'البند':'ذمم مستحقة لي من العملاء','القيمة': a.totalReceivablesFromClients},
+    {'البند':'ديون مستحقة لي','القيمة': a.debtsOwedToMe},
+    {'البند':'ديون مستحقة عليّ','القيمة': a.debtsOwedByMe},
+    {'البند':'رأس المال الحالي (تقديري)','القيمة': a.netCapital},
+    {'البند':'العملة','القيمة': cur},
+  ];
+}
+
+function exportAll(){
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, sheetFromRows(summaryRows()), 'الوضع المالي');
+  XLSX.utils.book_append_sheet(wb, sheetFromRows(ledgerRows()), 'سجل العمليات');
+  XLSX.utils.book_append_sheet(wb, sheetFromRows(projectRows()), 'المشاريع');
+  XLSX.utils.book_append_sheet(wb, sheetFromRows(clientRows()), 'العملاء');
+  XLSX.utils.book_append_sheet(wb, sheetFromRows(debtRows()), 'الديون');
+  downloadWorkbook(wb, `دفتري-تقرير-شامل-${arDate()}.xlsx`);
+}
+function exportDebts(){
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, sheetFromRows(debtRows('owed_to_me')), 'مستحق لي');
+  XLSX.utils.book_append_sheet(wb, sheetFromRows(debtRows('owed_by_me')), 'مستحق عليّ');
+  downloadWorkbook(wb, `دفتري-الديون-${arDate()}.xlsx`);
+}
+function exportProjects(){
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, sheetFromRows(projectRows()), 'المشاريع');
+  downloadWorkbook(wb, `دفتري-المشاريع-${arDate()}.xlsx`);
+}
+function exportClients(){
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, sheetFromRows(clientRows()), 'العملاء');
+  downloadWorkbook(wb, `دفتري-العملاء-${arDate()}.xlsx`);
+}
+function exportLedger(){
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, sheetFromRows(ledgerRows()), 'سجل العمليات');
+  downloadWorkbook(wb, `دفتري-السجل-${arDate()}.xlsx`);
+}
+
+/* ============================ SETTINGS ============================ */
+function renderSettings(){
+  return `
+  <div class="card"><div class="pad">
+    <div class="section-title" style="padding:0 0 10px">${icon('settings')} معلومات</div>
+    <div style="font-size:13px;color:#5B5340;line-height:1.6">تُحفظ جميع بياناتك تلقائيًا على هذا الجهاز (تخزين محلي داخل التطبيق). عدد العمليات المسجلة: ${DATA.transactions.length}.</div>
+  </div></div>
+  <div class="card"><div class="pad">
+    <div class="section-title" style="padding:0 0 10px">${icon('file')} تصدير إلى Excel</div>
+    <div class="muted" style="margin-bottom:10px">أول عملية تصدير تحتاج اتصال إنترنت (لتحميل مكتبة Excel مرة واحدة)، وبعدها تعمل حتى بدون إنترنت.</div>
+    <div class="row wrap" style="gap:8px">
+      <button class="btn btn-primary" style="flex:1;min-width:140px" onclick="exportAll()">تقرير شامل (كل شيء)</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:120px" onclick="exportLedger()">السجل فقط</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:120px" onclick="exportProjects()">المشاريع فقط</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:120px" onclick="exportClients()">العملاء فقط</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:120px" onclick="exportDebts()">الديون فقط</button>
+    </div>
+  </div></div>
+  <div class="card"><div class="pad">
+    <div class="section-title" style="padding:0 0 10px">${icon('warn')} منطقة الخطر</div>
+    ${!CONFIRM_RESET ? `<button class="btn" style="background:none;color:var(--bad);padding:0;font-weight:600" onclick="CONFIRM_RESET=true;render()">إعادة تهيئة النظام بالكامل (حذف كل البيانات)</button>` : `
+    <div style="font-size:13px;color:var(--bad);margin-bottom:8px">هل أنت متأكد؟ هذا الإجراء سيحذف كل البيانات نهائيًا.</div>
+    <div class="row"><button class="btn btn-ghost" onclick="CONFIRM_RESET=false;render()">إلغاء</button><button class="btn btn-danger flex1" onclick="resetAll()">تأكيد الحذف</button></div>`}
+  </div></div>`;
+}
+function resetAll(){
+  DATA = emptyData(); saveData(DATA);
+  CONFIRM_RESET = false; SETUP_STEP = 0; SETUP_DRAFT = null;
+  showToast('تمت إعادة تهيئة النظام','bad');
+  render();
+}
+
+/* ============================ INIT ============================ */
+render();
+
+// register service worker for offline support
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
